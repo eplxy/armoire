@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/exply/armoire/internal/taxonomy"
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
 )
@@ -34,7 +35,7 @@ func NewAIClient(ctx context.Context) (*AIClient, error) {
 		return nil, err
 	}
 
-	model := client.GenerativeModel("gemini-3-flash-preview")
+	model := client.GenerativeModel("gemini-2.0-flash")
 	model.ResponseMIMEType = "application/json" // Force JSON output
 
 	// Use the latest embedding model
@@ -48,17 +49,36 @@ func NewAIClient(ctx context.Context) (*AIClient, error) {
 
 // AnalyzeImage sends the image data to Gemini and gets structured tags
 func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader) (*ClothingAnalysis, error) {
-	prompt := `
-		Analyze this image of a clothing item. 
-		Return a JSON object with the following fields:
-		- name: A creative, short title (e.g. "Vintage Acid Wash Jeans")
-		- category: The specific type (e.g. "Denim Jacket", "Sneakers")
-		- colors: A list of dominant colors
-		- seasons: Best seasons to wear this (Winter, Summer, etc.)
-		- occasions: Best occasions (Casual, Formal, Party, Work)
-		- description: A detailed visual description of the item, including texture, pattern, and style. 
-		  (This description will be used for AI search, so be descriptive)
-	`
+	// join the slices into comma-separated strings
+	validCategories := strings.Join(taxonomy.Categories, ", ")
+	validSubCategories := strings.Join(taxonomy.SubCategories, ", ")
+	validColors := strings.Join(taxonomy.Colors, ", ")
+	validOccasions := strings.Join(taxonomy.Occasions, ", ")
+
+	prompt := fmt.Sprintf(`
+		You are a fashion archivist. Analyze this image of a clothing item.
+		
+		STRICT RULES:
+		1. Return ONLY valid JSON.
+		2. Use ONLY the allowed values provided below. Do not invent new tags.
+
+		ALLOWED VALUES:
+		- category: Choose one from [%s]
+		- sub_category: Choose one from [%s]
+		- colors: Choose up to 3 from [%s]
+        - occasions: Choose from [%s]
+
+		JSON STRUCTURE:
+		{
+			"name": "A creative, short title (e.g. 'Vintage Acid Wash Jeans')",
+			"category": "One value from the allowed list",
+			"sub_category": "One value from the allowed list",
+			"colors": ["Value1", "Value2"],
+			"seasons": ["Winter", "Fall"],
+			"occasions": ["Casual"],
+			"description": "A detailed visual description for search embedding."
+		}
+	`, validCategories, validSubCategories, validColors, validOccasions)
 
 	// Read image data into bytes
 	imgBytes, err := io.ReadAll(imageData)
