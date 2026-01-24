@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -12,6 +11,7 @@ import (
 	"github.com/exply/armoire/internal/database"
 	"github.com/exply/armoire/internal/models"
 	"github.com/exply/armoire/internal/storage"
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -20,18 +20,27 @@ import (
 // @Tags clothing
 // @Accept multipart/form-data
 // @Produce json
+// @Security     BearerAuth
 // @Param image formData file true "Clothing item image (max 10MB)"
 // @Success 200 {object} models.ClothingItem "Successfully uploaded and processed clothing item"
 // @Failure 400 {string} string "Invalid file"
 // @Failure 500 {string} string "Failed to upload to GCS / AI Analysis Failed / Vector Embedding Failed / Database Save Failed"
 // @Router /clothing/upload [post]
-func UploadClothingHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. Parse the Multipart Form (10MB limit)
-	r.ParseMultipartForm(10 << 20)
+func UploadClothingHandler(c *gin.Context) {
 
-	file, header, err := r.FormFile("image")
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID := userIDVal.(string) // Type assertion to string
+
+	// 1. Parse the Multipart Form (10MB limit)
+	c.Request.ParseMultipartForm(10 << 20)
+
+	file, header, err := c.Request.FormFile("image")
 	if err != nil {
-		http.Error(w, "Invalid file", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
 		return
 	}
 	defer file.Close()
@@ -39,7 +48,7 @@ func UploadClothingHandler(w http.ResponseWriter, r *http.Request) {
 	// Read the file data into memory for both GCS upload and AI analysis
 	fileData, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
 
@@ -50,7 +59,7 @@ func UploadClothingHandler(w http.ResponseWriter, r *http.Request) {
 	filename := primitive.NewObjectID().Hex() + filepath.Ext(header.Filename)
 	gcsURI, err := gcsClient.UploadFile(bytes.NewReader(fileData), filename)
 	if err != nil {
-		http.Error(w, "Failed to upload to GCS", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload to GCS"})
 		return
 	}
 
@@ -58,29 +67,28 @@ func UploadClothingHandler(w http.ResponseWriter, r *http.Request) {
 	publicURL := "https://storage.googleapis.com/armoire-bucket/" + filename
 
 	// 3. Analyze with Gemini (Auto-Tagging)
-	ctx := r.Context()
-	aiClient, _ := ai.NewAIClient(ctx) // Initialize AI Client
+	aiClient, _ := ai.NewAIClient(c.Request.Context()) // Initialize AI Client
 
-	analysis, err := aiClient.AnalyzeImage(ctx, bytes.NewReader(fileData))
+	analysis, err := aiClient.AnalyzeImage(c.Request.Context(), bytes.NewReader(fileData))
 	if err != nil {
 		// Fallback: If AI fails, we can still save the image, just with empty tags
 		// But for now, let's report the error
-		http.Error(w, "AI Analysis Failed: "+err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI Analysis Failed: " + err.Error()})
 		return
 	}
 
 	// 4. Generate Vector Embedding for "Vibe Search"
 	// We embed the description Gemini just wrote for us
-	vector, err := aiClient.GetEmbedding(ctx, analysis.Description)
+	vector, err := aiClient.GetEmbedding(c.Request.Context(), analysis.Description)
 	if err != nil {
-		http.Error(w, "Vector Embedding Failed", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Vector Embedding Failed"})
 		return
 	}
 
 	// 5. Save to MongoDB
 	newItem := models.ClothingItem{
 		ID:          primitive.NewObjectID(),
-		UserID:      "test-user-id", // TODO Replace with actual Auth User ID later
+		UserID:      userID,
 		ImageURL:    publicURL,
 		GCSURI:      gcsURI,
 		Name:        analysis.Name,
@@ -94,14 +102,13 @@ func UploadClothingHandler(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:   time.Now(),
 	}
 
-	collection := database.GetCollection("clothing_items")
-	_, err = collection.InsertOne(ctx, newItem)
+	collection := database.GetCollection("clothing")
+	_, err = collection.InsertOne(c.Request.Context(), newItem)
 	if err != nil {
-		http.Error(w, "Database Save Failed", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database Save Failed"})
 		return
 	}
 
 	// 6. Return Success Response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(newItem)
+	c.JSON(http.StatusOK, newItem)
 }

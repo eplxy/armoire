@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/exply/armoire/internal/handlers"
+	"github.com/exply/armoire/internal/middleware"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -16,7 +17,17 @@ func SetupRouter() *gin.Engine {
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	router.POST("/clothing/upload", gin.WrapF(handlers.UploadClothingHandler))
+	// auth
+
+	router.POST("/auth/register", handlers.RegisterHandler)
+	router.POST("/auth/login", handlers.LoginHandler)
+
+	// Protected Routes
+	protected := router.Group("/")
+	protected.Use(middleware.AuthMiddleware())
+	{
+		protected.POST("/clothing/upload", handlers.UploadClothingHandler)
+	}
 
 	router.GET("/ping", pingHandler)
 	return router

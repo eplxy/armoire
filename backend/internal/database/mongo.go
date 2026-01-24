@@ -36,5 +36,5 @@ func InitDB(uri string) {
 
 // GetCollection returns a handle to a specific collection
 func GetCollection(collectionName string) *mongo.Collection {
-	return Client.Database("aremoir-db").Collection(collectionName)
+	return Client.Database("armoire-db").Collection(collectionName)
 }
