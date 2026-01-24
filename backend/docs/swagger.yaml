@@ -1,6 +1,48 @@
 basePath: /
 definitions:
-  main.PingResponse:
+  models.ClothingItem:
+    properties:
+      category:
+        description: e.g., "Outerwear", "Top", "Bottom"
+        type: string
+      colors:
+        description: Tags
+        items:
+          type: string
+        type: array
+      createdAt:
+        description: Timestamps
+        type: string
+      description:
+        description: |-
+          The "Vibe" Engine
+          Gemini will generate a text description, which we then convert to a vector
+        type: string
+      id:
+        type: string
+      imageUrl:
+        description: Image Data
+        type: string
+      name:
+        description: Basic Metadata
+        type: string
+      occasions:
+        description: Casual, Formal
+        items:
+          type: string
+        type: array
+      seasons:
+        description: Winter, Summer
+        items:
+          type: string
+        type: array
+      updatedAt:
+        type: string
+      userId:
+        description: Good for scaling later
+        type: string
+    type: object
+  router.PingResponse:
     properties:
       message:
         example: pong
@@ -8,18 +50,43 @@ definitions:
     type: object
 host: localhost:8080
 info:
-  contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
+  contact: {}
   description: API for Armoire application
-  license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
   title: Armoire API
   version: "1.0"
 paths:
+  /clothing/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a clothing item image, analyze it with AI for auto-tagging,
+        generate vector embeddings, and store in database
+      parameters:
+      - description: Clothing item image (max 10MB)
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully uploaded and processed clothing item
+          schema:
+            $ref: '#/definitions/models.ClothingItem'
+        "400":
+          description: Invalid file
+          schema:
+            type: string
+        "500":
+          description: Failed to upload to GCS / AI Analysis Failed / Vector Embedding
+            Failed / Database Save Failed
+          schema:
+            type: string
+      summary: Upload a clothing item
+      tags:
+      - clothing
   /ping:
     get:
       consumes:
@@ -31,7 +98,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.PingResponse'
+            $ref: '#/definitions/router.PingResponse'
       summary: Ping endpoint
       tags:
       - health

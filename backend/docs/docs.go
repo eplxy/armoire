@@ -10,20 +10,56 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/clothing/upload": {
+            "post": {
+                "description": "Upload a clothing item image, analyze it with AI for auto-tagging, generate vector embeddings, and store in database",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clothing"
+                ],
+                "summary": "Upload a clothing item",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Clothing item image (max 10MB)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully uploaded and processed clothing item",
+                        "schema": {
+                            "$ref": "#/definitions/models.ClothingItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid file",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to upload to GCS / AI Analysis Failed / Vector Embedding Failed / Database Save Failed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/ping": {
             "get": {
                 "description": "Returns pong message",
@@ -41,7 +77,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.PingResponse"
+                            "$ref": "#/definitions/router.PingResponse"
                         }
                     }
                 }
@@ -49,7 +85,63 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "main.PingResponse": {
+        "models.ClothingItem": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "description": "e.g., \"Outerwear\", \"Top\", \"Bottom\"",
+                    "type": "string"
+                },
+                "colors": {
+                    "description": "Tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "createdAt": {
+                    "description": "Timestamps",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "The \"Vibe\" Engine\nGemini will generate a text description, which we then convert to a vector",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "description": "Image Data",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Basic Metadata",
+                    "type": "string"
+                },
+                "occasions": {
+                    "description": "Casual, Formal",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "seasons": {
+                    "description": "Winter, Summer",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "userId": {
+                    "description": "Good for scaling later",
+                    "type": "string"
+                }
+            }
+        },
+        "router.PingResponse": {
             "type": "object",
             "properties": {
                 "message": {

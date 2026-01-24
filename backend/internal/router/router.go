@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/exply/armoire/internal/handlers"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -14,6 +15,8 @@ func SetupRouter() *gin.Engine {
 	router.Use(cors.Default()) // All origins allowed by default
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	router.POST("/clothing/upload", gin.WrapF(handlers.UploadClothingHandler))
 
 	router.GET("/ping", pingHandler)
 	return router
