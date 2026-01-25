@@ -184,6 +184,31 @@ const docTemplate = `{
                 }
             }
         },
+        "/clothing/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get statistics about a user's clothing collection including total count, color distribution, and category distribution",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clothing"
+                ],
+                "summary": "Get user clothing statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserStatsResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/clothing/upload": {
             "post": {
                 "security": [
@@ -375,6 +400,26 @@ const docTemplate = `{
                 "query": {
                     "description": "e.g. \"Dinner date\" or \"Blue jacket\"",
                     "type": "string"
+                }
+            }
+        },
+        "handlers.UserStatsResponse": {
+            "type": "object",
+            "properties": {
+                "categoryCounts": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "colorCounts": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "totalItems": {
+                    "type": "integer"
                 }
             }
         },

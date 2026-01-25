@@ -1,6 +1,8 @@
 import { CheckCircle } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import CheckroomIcon from "@mui/icons-material/Checkroom";
+import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
   Chip,
@@ -8,6 +10,7 @@ import {
   Grid,
   IconButton,
   Paper,
+  Skeleton,
   Stack,
   TextField,
   ToggleButton,
@@ -15,8 +18,12 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AddClothingDialog from "../components/dialogs/AddClothingDialog";
+import {
+  useGetClothingStats,
+  useSearchClothing,
+} from "../hooks/queries/clothingQueries";
 
 const CATEGORIES = [
   "Tops",
@@ -65,6 +72,8 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 export default function ClothingView() {
+  const searchMutation = useSearchClothing();
+  const clothingStatsQuery = useGetClothingStats();
   const [query, setQuery] = useState<string>("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -89,6 +98,19 @@ export default function ClothingView() {
     setIsAISearchActive((prev) => !prev);
   };
 
+  const triggerSearch = () => {
+    searchMutation.mutate({
+      query,
+      categories: selectedCategories,
+      colors: selectedColors,
+      aiSearch: isAISearchActive,
+    });
+  };
+
+  useEffect(() => {
+    triggerSearch();
+  }, []);
+
   return (
     <Grid
       container
@@ -112,23 +134,30 @@ export default function ClothingView() {
         >
           <Stack spacing={3}>
             <TextField
-            helperText={isAISearchActive ? "Using AI to improve search" : ""}
+              helperText={isAISearchActive ? "Using AI to improve search" : ""}
               slotProps={{
                 input: {
                   sx: { borderRadius: 4 },
                   endAdornment: (
-                    <Tooltip
-                      title={`${isAISearchActive ? "Disable" : "Enable"} AI Search`}
-                    >
-                      <IconButton
-                        sx={{
-                          color: isAISearchActive ? "#9FB281" : "primary",
-                        }}
-                        onClick={handleAISearchToggled}
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Tooltip
+                        title={`${isAISearchActive ? "Disable" : "Enable"} AI Search`}
                       >
-                        <AutoAwesomeIcon />
-                      </IconButton>
-                    </Tooltip>
+                        <IconButton
+                          sx={{
+                            color: isAISearchActive ? "#9FB281" : "primary",
+                          }}
+                          onClick={handleAISearchToggled}
+                        >
+                          <AutoAwesomeIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Search">
+                        <IconButton onClick={triggerSearch}>
+                          <SearchIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   ),
                 },
               }}
@@ -140,7 +169,14 @@ export default function ClothingView() {
             />
 
             <Stack spacing={1}>
-              <Typography variant="subtitle1">Categories</Typography>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="subtitle1">Categories</Typography>
+                {selectedCategories.length > 0 && (
+                  <Typography variant="subtitle1" color="text.secondary">
+                    {`(Selected: ${selectedCategories.length})`}
+                  </Typography>
+                )}
+              </Box>
               <ToggleButtonGroup
                 value={selectedCategories}
                 onChange={handleCategoryToggle}
@@ -171,7 +207,14 @@ export default function ClothingView() {
             </Stack>
 
             <Stack spacing={1}>
-              <Typography variant="subtitle1">Colors</Typography>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="subtitle1">Colors</Typography>
+                {selectedColors.length > 0 && (
+                  <Typography variant="subtitle1" color="text.secondary">
+                    {`(Selected: ${selectedColors.length})`}
+                  </Typography>
+                )}
+              </Box>
               <Stack direction="row" flexWrap="wrap" gap={1}>
                 {COLORS.map((color) => {
                   const isSelected = selectedColors.includes(color);
@@ -241,7 +284,64 @@ export default function ClothingView() {
             position: "relative",
           }}
         >
-          <Stack></Stack>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            {searchMutation.isSuccess &&
+              searchMutation.data.length > 0 &&
+              searchMutation.data.map((item) => (
+                <Box
+                  sx={{ width: 160, height: 160 }}
+                  key={item.id}
+                >
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    style={{
+                      width: 160,
+                      height: 160,
+                      objectFit: "cover",
+                    }}
+                  />
+                </Box>
+              ))}
+            {searchMutation.isPending &&
+              clothingStatsQuery.data !== undefined &&
+              Array.from({ length: clothingStatsQuery.data.totalItems }).map(
+                (_, index) => (
+                  <Skeleton
+                    key={index}
+                    variant="rectangular"
+                    width={160}
+                    height={160}
+                    sx={{ marginRight: 1, marginBottom: 1 }}
+                  />
+                ),
+              )}
+          </Stack>
+
+          {searchMutation.isSuccess && searchMutation.data.length === 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                py: 8,
+              }}
+            >
+              <CheckroomIcon
+                sx={{ fontSize: 64, color: "text.secondary", opacity: 0.5 }}
+              />
+              <Typography variant="h6" color="text.secondary">
+                No clothing items found
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {clothingStatsQuery.data?.totalItems === 0
+                  ? "You have no clothing items. Start by adding some!"
+                  : "Try adjusting your filters or search query"}
+              </Typography>
+            </Box>
+          )}
           <Fab
             color="primary"
             size="medium"

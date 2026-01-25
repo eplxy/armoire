@@ -34,6 +34,7 @@ func SetupRouter() *gin.Engine {
 	{
 		protected.POST("/clothing/upload", handlers.UploadClothingHandler)
 		protected.POST("/clothing/search", handlers.SearchClothingHandler)
+		protected.GET("/clothing/stats", handlers.GetUserStatsHandler)
 		protected.GET("/user/userinfo", handlers.GetCurrentUserHandler)
 	}
 

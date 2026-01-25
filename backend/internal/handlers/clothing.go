@@ -11,6 +11,7 @@ import (
 	"github.com/exply/armoire/internal/database"
 	"github.com/exply/armoire/internal/models"
 	"github.com/exply/armoire/internal/storage"
+	"github.com/exply/armoire/internal/taxonomy"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -228,4 +229,79 @@ func UploadClothingHandler(c *gin.Context) {
 
 	// 6. Return Success Response
 	c.JSON(http.StatusOK, newItem)
+}
+
+// UserStatsResponse represents the statistics for a user's clothing collection
+type UserStatsResponse struct {
+	TotalItems     int            `json:"totalItems"`
+	ColorCounts    map[string]int `json:"colorCounts"`
+	CategoryCounts map[string]int `json:"categoryCounts"`
+}
+
+// @Summary Get user clothing statistics
+// @Description Get statistics about a user's clothing collection including total count, color distribution, and category distribution
+// @Tags clothing
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} handlers.UserStatsResponse
+// @Router /clothing/stats [get]
+func GetUserStatsHandler(c *gin.Context) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	collection := database.GetCollection("clothing")
+	ctx := c.Request.Context()
+
+	// Get all clothing items for the user
+	filter := bson.M{"user_id": userID}
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch clothing items"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var items []models.ClothingItem
+	if err = cursor.All(ctx, &items); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode clothing items"})
+		return
+	}
+
+	// Initialize maps with all possible colors and categories from taxonomy
+	colorCounts := make(map[string]int)
+	for _, color := range taxonomy.Colors {
+		colorCounts[color] = 0
+	}
+
+	categoryCounts := make(map[string]int)
+	for _, category := range taxonomy.Categories {
+		categoryCounts[category] = 0
+	}
+
+	// Count occurrences
+	for _, item := range items {
+		// Count colors (an item can have multiple colors)
+		for _, color := range item.Colors {
+			if _, exists := colorCounts[color]; exists {
+				colorCounts[color]++
+			}
+		}
+
+		// Count category (an item has one category)
+		if _, exists := categoryCounts[item.Category]; exists {
+			categoryCounts[item.Category]++
+		}
+	}
+
+	response := UserStatsResponse{
+		TotalItems:     len(items),
+		ColorCounts:    colorCounts,
+		CategoryCounts: categoryCounts,
+	}
+
+	c.JSON(http.StatusOK, response)
 }

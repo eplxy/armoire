@@ -45,6 +45,19 @@ definitions:
         description: e.g. "Dinner date" or "Blue jacket"
         type: string
     type: object
+  handlers.UserStatsResponse:
+    properties:
+      categoryCounts:
+        additionalProperties:
+          type: integer
+        type: object
+      colorCounts:
+        additionalProperties:
+          type: integer
+        type: object
+      totalItems:
+        type: integer
+    type: object
   models.ClothingItem:
     properties:
       category:
@@ -220,6 +233,22 @@ paths:
       security:
       - BearerAuth: []
       summary: Search clothing items
+      tags:
+      - clothing
+  /clothing/stats:
+    get:
+      description: Get statistics about a user's clothing collection including total
+        count, color distribution, and category distribution
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserStatsResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user clothing statistics
       tags:
       - clothing
   /clothing/upload:

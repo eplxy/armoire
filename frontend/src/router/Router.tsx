@@ -21,9 +21,13 @@ export default function Router() {
         <Route
           path="/clothing"
           element={
-            <Layout unlockHeight>
-              <ClothingView />
-            </Layout>
+            isLoggedIn ? (
+              <Layout unlockHeight>
+                <ClothingView />
+              </Layout>
+            ) : (
+              <Navigate to="/landing" />
+            )
           }
         />
 
