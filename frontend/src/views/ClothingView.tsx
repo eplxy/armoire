@@ -166,6 +166,11 @@ export default function ClothingView() {
               fullWidth
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  triggerSearch();
+                }
+              }}
             />
 
             <Stack spacing={1}>
@@ -288,10 +293,7 @@ export default function ClothingView() {
             {searchMutation.isSuccess &&
               searchMutation.data.length > 0 &&
               searchMutation.data.map((item) => (
-                <Box
-                  sx={{ width: 160, height: 160 }}
-                  key={item.id}
-                >
+                <Box sx={{ width: 160, height: 160 }} key={item.id}>
                   <img
                     src={item.imageUrl}
                     alt={item.name}

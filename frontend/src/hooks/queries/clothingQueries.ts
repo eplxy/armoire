@@ -37,3 +37,15 @@ export const useGetClothingStats = () => {
         .json<ClothingStats>(),
   });
 };
+
+export const useUploadClothingItem = () => {
+  return useMutation({
+    mutationKey: ["clothing", "upload"],
+    mutationFn: (formData: FormData) =>
+      api
+        .auth(`Bearer ${localStorage.getItem("token") || ""}`)
+        .url("/clothing/upload")
+        .post(formData)
+        .json<ClothingItem>(),
+  });
+}
