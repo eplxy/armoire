@@ -54,7 +54,7 @@ const COLORS = [
   "Multi-colored",
 ];
 
-const COLOR_MAP: Record<string, string> = {
+export const COLOR_MAP: Record<string, string> = {
   Black: "#222",
   White: "#FFFFFF",
   Grey: "#808080",

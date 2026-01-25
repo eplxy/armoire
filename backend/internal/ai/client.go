@@ -127,3 +127,37 @@ func (c *AIClient) GetEmbedding(ctx context.Context, text string) ([]float32, er
 	}
 	return resp.Embedding.Values, nil
 }
+
+// GenerateStylistBlurb takes a map of stats (e.g. {"Black": 5, "Blue": 2, "Tops": 10})
+func (c *AIClient) GenerateStylistBlurb(ctx context.Context, stats map[string]interface{}) (string, error) {
+	model := c.GenModel
+	model.ResponseMIMEType = "text/plain" // We just want a string this time
+
+	prompt := fmt.Sprintf(`
+		You are a witty, helpful personal stylist.
+		I will give you statistics about a user's closet. 
+		
+		CLOSET DATA:
+		%v
+		
+		YOUR TASK:
+		Write a short, engaging "Message of the Day" (max 2-3 sentences).
+		1. Compliment their specific style based on the data (e.g., "You really love your earth tones!" or "You are the queen of denim!").
+		2. Give one specific recommendation for what to wear today OR what they should buy next to balance their wardrobe.
+		
+		Tone: Friendly, encouraging, and slightly fashion-forward.
+		Keep it under 60 words.
+	`, stats)
+
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", err
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "Your closet is looking great today! Time to mix and match.", nil
+	}
+
+	// Extract text
+	return fmt.Sprintf("%s", resp.Candidates[0].Content.Parts[0]), nil
+}

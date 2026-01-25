@@ -80,8 +80,8 @@ func SearchClothingHandler(c *gin.Context) {
 				{Key: "index", Value: "vector_index"},
 				{Key: "path", Value: "embedding"},
 				{Key: "queryVector", Value: queryVector},
-				{Key: "numCandidates", Value: 100},
-				{Key: "limit", Value: 20},
+				{Key: "numCandidates", Value: 20},
+				{Key: "limit", Value: 5},
 				{Key: "filter", Value: filter},
 			}}},
 			// Hide the embedding field to save bandwidth

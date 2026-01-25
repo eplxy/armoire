@@ -35,6 +35,7 @@ export default function Header(props: HeaderProps) {
         position: props.nonStick ? "relative" : "sticky",
         py: { xs: 2, sm: 3, md: 4 },
       }}
+      zIndex={9999}
     >
       <Box
         sx={{

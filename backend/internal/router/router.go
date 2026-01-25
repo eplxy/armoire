@@ -39,6 +39,7 @@ func SetupRouter() *gin.Engine {
 		protected.PATCH("/clothing/:id", handlers.UpdateClothingHandler)
 		protected.DELETE("/clothing/:id", handlers.DeleteClothingHandler)
 		protected.GET("/user/userinfo", handlers.GetCurrentUserHandler)
+		protected.GET("/dashboard/stylist", handlers.GetStylistMessageHandler)
 	}
 	router.GET("/clothing/:id/owner", handlers.GetClothingOwnerNameHandler)
 
