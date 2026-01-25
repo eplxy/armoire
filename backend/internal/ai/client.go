@@ -48,7 +48,7 @@ func NewAIClient(ctx context.Context) (*AIClient, error) {
 }
 
 // AnalyzeImage sends the image data to Gemini and gets structured tags
-func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader) (*ClothingAnalysis, error) {
+func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader, mimeType string) (*ClothingAnalysis, error) {
 	// join the slices into comma-separated strings
 	validCategories := strings.Join(taxonomy.Categories, ", ")
 	validSubCategories := strings.Join(taxonomy.SubCategories, ", ")
@@ -89,7 +89,7 @@ func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader) (*Clot
 	// Send image data inline to Gemini
 	resp, err := c.GenModel.GenerateContent(ctx,
 		genai.Text(prompt),
-		genai.ImageData("jpeg", imgBytes),
+		genai.ImageData(mimeType, imgBytes),
 	)
 	if err != nil {
 		return nil, err

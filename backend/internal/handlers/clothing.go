@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -153,44 +154,61 @@ func UploadClothingHandler(c *gin.Context) {
 	}
 	userID := userIDVal.(string) // Type assertion to string
 
-	// 1. Parse the Multipart Form (10MB limit)
-	c.Request.ParseMultipartForm(10 << 20)
-
-	file, header, err := c.Request.FormFile("image")
+	// 1. Parse File
+	fileHeader, err := c.FormFile("image")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
 		return
 	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+
 	defer file.Close()
 
-	// Read the file data into memory for both GCS upload and AI analysis
-	fileData, err := io.ReadAll(file)
+	// Read into memory
+	originalBytes, err := io.ReadAll(file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
 
-	// 2. Upload to Google Cloud Storage
+	finalBytes := originalBytes
+	finalMimeType := http.DetectContentType(originalBytes)
+	baseName := primitive.NewObjectID().Hex()
+	finalFilename := baseName + filepath.Ext(fileHeader.Filename)
+
+	processedBytes, err := ai.RemoveBackground(originalBytes, fileHeader.Filename)
+
+	fmt.Println("e")
+
+	if err == nil {
+		fmt.Println("Background removed successfully!")
+		finalBytes = processedBytes
+		finalMimeType = "image/png"
+		finalFilename = baseName + ".png" // Force extension to .png
+	} else {
+		fmt.Println("Background removal failed (using original):", err)
+	}
+
 	gcsClient, _ := storage.NewStorageClient("armoire-bucket")
 
-	// Generate a unique filename
-	filename := primitive.NewObjectID().Hex() + filepath.Ext(header.Filename)
-	gcsURI, err := gcsClient.UploadFile(bytes.NewReader(fileData), filename)
+	// Pass finalBytes to GCS
+	gcsURI, err := gcsClient.UploadFile(bytes.NewReader(finalBytes), finalFilename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload to GCS"})
 		return
 	}
-
-	// Construct the public HTTP URL for the frontend to display
-	publicURL := "https://storage.googleapis.com/armoire-bucket/" + filename
+	publicURL := "https://storage.googleapis.com/armoire-bucket/" + finalFilename
 
 	// 3. Analyze with Gemini (Auto-Tagging)
 	aiClient, _ := ai.NewAIClient(c.Request.Context()) // Initialize AI Client
 
-	analysis, err := aiClient.AnalyzeImage(c.Request.Context(), bytes.NewReader(fileData))
+	analysis, err := aiClient.AnalyzeImage(c.Request.Context(), bytes.NewReader(finalBytes), finalMimeType)
 	if err != nil {
-		// Fallback: If AI fails, we can still save the image, just with empty tags
-		// But for now, let's report the error
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI Analysis Failed: " + err.Error()})
 		return
 	}
