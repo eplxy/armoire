@@ -19,6 +19,8 @@ definitions:
       password:
         minLength: 6
         type: string
+      returnToken:
+        type: boolean
     required:
     - email
     - name
@@ -64,6 +66,17 @@ definitions:
         type: string
       userId:
         description: Good for scaling later
+        type: string
+    type: object
+  models.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
         type: string
     type: object
   router.PingResponse:
@@ -211,6 +224,41 @@ paths:
       summary: Ping endpoint
       tags:
       - health
+  /user/userinfo:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's information from JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User data
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - user
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

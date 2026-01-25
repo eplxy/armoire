@@ -17,9 +17,10 @@ import (
 
 // Request bodies
 type RegisterRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Name        string `json:"name" binding:"required"`
+	Email       string `json:"email" binding:"required,email"`
+	Password    string `json:"password" binding:"required,min=6"`
+	ReturnToken bool   `json:"returnToken"`
 }
 
 type LoginRequest struct {
@@ -75,6 +76,22 @@ func RegisterHandler(c *gin.Context) {
 	_, err = collection.InsertOne(ctx, newUser)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create user"})
+		return
+	}
+
+	if req.ReturnToken {
+		// Generate JWT token
+		token, err := GenerateJWT(newUser.ID.Hex())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "User created successfully",
+			"token":   token,
+			"user":    newUser,
+		})
 		return
 	}
 
