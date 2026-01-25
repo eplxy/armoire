@@ -37,7 +37,7 @@ export const useAuthentication = () => {
 export function logout(reload: boolean = true) {
   localStorage.removeItem("token");
   if (reload) {
-    window.location.href = "/login";
+    window.location.reload();
   }
 }
 
@@ -47,7 +47,6 @@ export const useLoadUserData = () => {
 
   useEffect(() => {
     if (query.isSuccess && query.data) {
-      console.log(query.data)
       setUser(query.data);
     }
   }, [

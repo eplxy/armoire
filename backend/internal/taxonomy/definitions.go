@@ -1,12 +1,14 @@
 package taxonomy
 
 var Categories = []string{
-	"Tops", "Bottoms", "Outerwear", "Shoes", "Accessories", "Dresses",
+	"Tops", "Dresses", "Bottoms", "Outerwear", "Shoes", "Accessories",
 }
 
 var SubCategories = []string{
 	// Tops
 	"T-Shirt", "Shirt", "Blouse", "Sweater", "Hoodie", "Tank Top",
+	// Dresses
+	"Dress", "Jumpsuit", "Romper",
 	// Bottoms
 	"Jeans", "Pants", "Shorts", "Skirt", "Leggings",
 	// Outerwear

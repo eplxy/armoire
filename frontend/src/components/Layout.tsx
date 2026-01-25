@@ -10,6 +10,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Stack,
   Toolbar,
 } from "@mui/material";
 import { Outlet, useLocation, useNavigate } from "react-router";
@@ -24,10 +25,14 @@ import { useLoadUserData } from "../hooks/useAuthentication";
 import useUserStore from "../stores/userStore";
 import ArmoireLogo from "./generic/ArmoireLogo";
 import UserAvatar from "./generic/UserAvatar";
+import Header from "./Header";
 
 const drawerWidth = 240;
 
-interface LayoutProps {}
+interface LayoutProps {
+  children?: React.ReactNode;
+  unlockHeight?: boolean;
+}
 
 export default function Layout(props: LayoutProps) {
   useLoadUserData();
@@ -44,91 +49,25 @@ export default function Layout(props: LayoutProps) {
   ];
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Stack sx={{ display: "flex" }}>
       <CssBaseline />
 
-      {/* --- HEADER (APPBAR) --- */}
-      <AppBar
-        position="fixed"
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1, // Header sits on top of Drawer
-          bgcolor: "primary.main",
-        }}
-      >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Box>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              sx={{ mr: 2, display: { sm: "none" } }} // Show hamburger only on mobile
-            >
-              <MenuIcon />
-            </IconButton>
-
-            <ArmoireLogo />
-          </Box>
-
-          <UserAvatar name={user.name} />
-        </Toolbar>
-      </AppBar>
-
-      {/* --- SIDEBAR (DRAWER) --- */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
-            boxSizing: "border-box",
-          },
-          display: { xs: "none", sm: "block" },
-        }}
-      >
-        <Toolbar /> {/* Spacer to push content down below AppBar */}
-        <Box sx={{ overflow: "auto" }}>
-          <List>
-            {menuItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton
-                  onClick={() => navigate(item.path)}
-                  selected={location.pathname === item.path} // Highlight active route
-                  sx={{
-                    "&.Mui-selected": {
-                      bgcolor: "primary.light",
-                      color: "primary.contrastText",
-                      "&:hover": {
-                        bgcolor: "primary.main",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      color:
-                        location.pathname === item.path ? "inherit" : "inherit",
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-          <Divider />
-        </Box>
-      </Drawer>
-
-      {/* --- MAIN CONTENT AREA --- */}
+      <Header layout nonStick />
       <Box
         component="main"
-        sx={{ flexGrow: 1, p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}
+        sx={{
+          mx: { xs: 2, sm: 4, md: 8 },
+          pb: 4,
+          flexGrow: 1,
+          bgcolor: "background.default",
+          height:
+            props.children && props.unlockHeight
+              ? {xs: "auto" , md: "calc(100vh - 134px)"}
+              : "calc(100vh - 134px)",
+        }}
       >
-        <Toolbar />
-        <Outlet />
+        {props.children ? props.children : <Outlet />}
       </Box>
-    </Box>
+    </Stack>
   );
 }

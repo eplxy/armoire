@@ -1,0 +1,257 @@
+import { CheckCircle } from "@mui/icons-material";
+import AddIcon from "@mui/icons-material/Add";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import {
+  Box,
+  Chip,
+  Fab,
+  Grid,
+  IconButton,
+  Paper,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { useState } from "react";
+
+const CATEGORIES = [
+  "Tops",
+  "Dresses",
+  "Bottoms",
+  "Outerwear",
+  "Shoes",
+  "Accessories",
+];
+
+const COLORS = [
+  "Black",
+  "White",
+  "Grey",
+  "Beige",
+  "Brown",
+  "Red",
+  "Blue",
+  "Green",
+  "Yellow",
+  "Orange",
+  "Purple",
+  "Pink",
+  "Gold",
+  "Silver",
+  "Multi-colored",
+];
+
+const COLOR_MAP: Record<string, string> = {
+  Black: "#222",
+  White: "#FFFFFF",
+  Grey: "#808080",
+  Beige: "#E8DCC4",
+  Brown: "#A67C52",
+  Red: "#C67B7B",
+  Blue: "#7BA3C6",
+  Green: "#7BC67B",
+  Yellow: "#D4C67B",
+  Orange: "#D4A67B",
+  Purple: "#A67BC6",
+  Pink: "#D47BA3",
+  Gold: "#D4B87B",
+  Silver: "#C0C0C0",
+  "Multi-colored":
+    "linear-gradient(90deg, #C67B7B, #D4A67B, #D4C67B, #7BC67B, #7BA3C6, #8B7BA3, #A67BC6)",
+};
+
+export default function ClothingView() {
+  const [query, setQuery] = useState<string>("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+
+  const [isAISearchActive, setIsAISearchActive] = useState<boolean>(false);
+
+  const handleCategoryToggle = (
+    _event: React.MouseEvent<HTMLElement>,
+    newCategories: string[],
+  ) => {
+    setSelectedCategories(newCategories);
+  };
+
+  const handleColorToggle = (color: string) => {
+    setSelectedColors((prev) =>
+      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color],
+    );
+  };
+
+  const handleAISearchToggled = () => {
+    setIsAISearchActive((prev) => !prev);
+  };
+
+  return (
+    <Grid
+      container
+      height="100%"
+      display="flex"
+      gap={2}
+      flexDirection={{ xs: "column", md: "row" }}
+    >
+      <Grid
+        size={{ xs: 12, md: 3 }}
+        sx={{ height: { xs: "auto", md: "100%" } }}
+      >
+        <Paper
+          sx={{
+            borderRadius: 8,
+            p: { xs: 2, md: 4 },
+            boxShadow: 2,
+            height: { xs: "auto", md: "100%" },
+            overflow: "auto",
+          }}
+        >
+          <Stack spacing={3}>
+            <TextField
+              slotProps={{
+                input: {
+                  sx: { borderRadius: 4 },
+                  endAdornment: (
+                    <Tooltip
+                      title={`${isAISearchActive ? "Disable" : "Enable"} AI Search`}
+                    >
+                      <IconButton
+                        sx={{
+                          color: isAISearchActive ? "#9FB281" : "primary",
+                        }}
+                        onClick={handleAISearchToggled}
+                      >
+                        <AutoAwesomeIcon />
+                      </IconButton>
+                    </Tooltip>
+                  ),
+                },
+              }}
+              placeholder="Search for clothes"
+              variant="outlined"
+              fullWidth
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+
+            <Stack spacing={1}>
+              <Typography variant="subtitle1">Categories</Typography>
+              <ToggleButtonGroup
+                value={selectedCategories}
+                onChange={handleCategoryToggle}
+                orientation="vertical"
+                fullWidth
+                size="small"
+              >
+                {CATEGORIES.map((category) => (
+                  <ToggleButton
+                    color={"primary"}
+                    key={category}
+                    value={category}
+                    sx={{
+                      justifyContent: "space-between",
+                      textTransform: "none",
+                      borderRadius: 2,
+                      gap: 1,
+                    }}
+                  >
+                    {category}
+
+                    {selectedCategories.includes(category) && (
+                      <CheckCircle fontSize="small" />
+                    )}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            </Stack>
+
+            <Stack spacing={1}>
+              <Typography variant="subtitle1">Colors</Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                {COLORS.map((color) => {
+                  const isSelected = selectedColors.includes(color);
+                  const colorValue = COLOR_MAP[color];
+
+                  return (
+                    <Chip
+                      key={color}
+                      label={color}
+                      onClick={() => handleColorToggle(color)}
+                      variant={isSelected ? "filled" : "outlined"}
+                      icon={
+                        <Box
+                          sx={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: colorValue,
+                            border:
+                              color === "White" ? "1px solid #ccc" : "none",
+                          }}
+                        />
+                      }
+                      sx={{
+                        color: "rgba(0, 0, 0, 0.54)",
+                        borderRadius: 2,
+                        ...(isSelected && {
+                          background:
+                            color === "Multi-colored" ? colorValue : colorValue,
+                          color: [
+                            "White",
+                            "Yellow",
+                            "Beige",
+                            "Gold",
+                            "Silver",
+                          ].includes(color)
+                            ? "#000"
+                            : "#fff",
+                          "&:hover": {
+                            background:
+                              color === "Multi-colored"
+                                ? colorValue
+                                : colorValue,
+                            filter: "brightness(0.9)",
+                          },
+                        }),
+                      }}
+                    />
+                  );
+                })}
+              </Stack>
+            </Stack>
+          </Stack>
+        </Paper>
+      </Grid>
+
+      <Grid
+        sx={{ height: { xs: "auto", md: "100%" } }}
+        size={{ xs: 12, md: "grow" }}
+      >
+        <Paper
+          sx={{
+            height: { xs: "500px", md: "100%" },
+            borderRadius: 8,
+            p: { xs: 2, md: 4 },
+            boxShadow: 2,
+            position: "relative",
+          }}
+        >
+          <Stack></Stack>
+          <Fab
+            color="primary"
+            size="medium"
+            sx={{
+              position: "absolute",
+              bottom: { xs: 12, md: 16 },
+              right: { xs: 12, md: 16 },
+            }}
+          >
+            <AddIcon />
+          </Fab>
+        </Paper>
+      </Grid>
+    </Grid>
+  );
+}

@@ -33,7 +33,7 @@ export default function RegisterView() {
           display: "flex",
           justifyContent: "center",
           alignItems: "start",
-          minHeight: "calc(100vh - 144px)",
+          minHeight: "calc(100vh - 134px)",
           pt: 8,
         }}
       >

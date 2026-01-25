@@ -20,7 +20,7 @@ export default function LandingView() {
   return (
     <>
       <Header />
-      <Stack sx={{ maxWidth: "100vw", py: 4, px: 8, gap: 4 }}>
+      <Stack sx={{ maxWidth: "100vw", px: 8, gap: 4 }}>
         <Paper sx={{ borderRadius: 8, p: 4, boxShadow: 2, height: "900px" }}>
           <Grid container>
             <Grid size={7}>some text</Grid>
