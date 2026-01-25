@@ -15,7 +15,7 @@ func SetupRouter() *gin.Engine {
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -35,8 +35,12 @@ func SetupRouter() *gin.Engine {
 		protected.POST("/clothing/upload", handlers.UploadClothingHandler)
 		protected.POST("/clothing/search", handlers.SearchClothingHandler)
 		protected.GET("/clothing/stats", handlers.GetUserStatsHandler)
+		protected.GET("/clothing/:id", handlers.GetClothingByIDHandler)
+		protected.PATCH("/clothing/:id", handlers.UpdateClothingHandler)
+		protected.DELETE("/clothing/:id", handlers.DeleteClothingHandler)
 		protected.GET("/user/userinfo", handlers.GetCurrentUserHandler)
 	}
+	router.GET("/clothing/:id/owner", handlers.GetClothingOwnerNameHandler)
 
 	router.GET("/ping", pingHandler)
 	return router

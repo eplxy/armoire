@@ -1,12 +1,14 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import Layout from "../components/Layout";
-import IndexView from "../views/IndexView";
-import LoginView from "../views/LoginView";
 import { useAuthentication } from "../hooks/useAuthentication";
-import LandingView from "../views/LandingView";
-import RegisterView from "../views/RegisterView";
+import ArticleView from "../views/ArticleView";
 import ClothingView from "../views/ClothingView";
+import IndexView from "../views/IndexView";
+import LandingView from "../views/LandingView";
+import LoginView from "../views/LoginView";
+import NotFoundView from "../views/NotFoundView";
 import OutfitsView from "../views/OutfitsView";
+import RegisterView from "../views/RegisterView";
 
 export default function Router() {
   const { isLoggedIn } = useAuthentication();
@@ -30,11 +32,25 @@ export default function Router() {
             )
           }
         />
+        <Route
+          path="/clothing/:clothingId"
+          element={
+            isLoggedIn ? (
+              <Layout unlockHeight>
+                <ArticleView />
+              </Layout>
+            ) : (
+              <Navigate to="/landing" />
+            )
+          }
+        />
 
         <Route path="/login" element={<LoginView />} />
         <Route path="/register" element={<RegisterView />} />
 
         <Route path="/landing" element={<LandingView />} />
+        
+        <Route path="*" element={<NotFoundView headerless/>} />
       </Routes>
     </BrowserRouter>
   );

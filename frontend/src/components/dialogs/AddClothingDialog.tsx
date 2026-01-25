@@ -1,5 +1,5 @@
-import ImageSearchIcon from "@mui/icons-material/ImageSearch";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
+import ImageSearchIcon from "@mui/icons-material/ImageSearch";
 import {
   Box,
   Button,
@@ -11,10 +11,10 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useUploadClothingItem } from "../../hooks/queries/clothingQueries";
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -23,7 +23,7 @@ interface Props {
 export default function AddClothingDialog(props: Props) {
   const queryClient = useQueryClient();
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [dropzoneKey, setDropzoneKey] = useState<number>(0);
+
   const { acceptedFiles, getRootProps, getInputProps, isDragActive } =
     useDropzone({
       accept: {
@@ -31,7 +31,6 @@ export default function AddClothingDialog(props: Props) {
       },
       maxFiles: 1,
     });
-
   const uploadMutation = useUploadClothingItem();
 
   // Automatically trigger upload when a file is selected/dropped
@@ -43,8 +42,8 @@ export default function AddClothingDialog(props: Props) {
         onSuccess: (data) => {
           console.log("Upload successful:", data);
           setIsSuccess(true);
-          queryClient.invalidateQueries({ queryKey: ["clothing", "stats"] });
-          queryClient.invalidateQueries({ queryKey: ["clothing", "search"] });
+          queryClient.refetchQueries({ queryKey: ["clothing", "stats"] });
+          queryClient.refetchQueries({ queryKey: ["clothing", "search"] });
         },
         onError: (error) => {
           console.error("Upload failed:", error);
@@ -52,11 +51,6 @@ export default function AddClothingDialog(props: Props) {
       });
     }
   }, [acceptedFiles]);
-
-  const handleAddAnother = () => {
-    setIsSuccess(false);
-    setDropzoneKey((prev) => prev + 1);
-  };
 
   return (
     <Dialog open={props.open} onClose={props.onClose}>
@@ -68,7 +62,6 @@ export default function AddClothingDialog(props: Props) {
           !uploadMutation.isPending &&
           !isSuccess && (
             <Stack
-              key={dropzoneKey}
               sx={{
                 color: isDragActive ? "primary.main" : "text.secondary",
                 border: isDragActive ? "2px dashed" : "2px dashed #ccc",
@@ -115,10 +108,9 @@ export default function AddClothingDialog(props: Props) {
             </Typography>
 
             <Box gap={2} sx={{ display: "flex" }}>
-              <Button variant="outlined" onClick={handleAddAnother}>
-                Add another
+              <Button variant="contained" onClick={() => props.onClose()}>
+                Done
               </Button>
-              <Button variant="contained">Done</Button>
             </Box>
           </Stack>
         )}

@@ -47,3 +47,20 @@ func (s *StorageClient) UploadFile(file io.Reader, filename string) (string, err
 	// For Gemini processing, return "gs://bucket/filename"
 	return "gs://" + s.BucketName + "/" + filename, nil
 }
+
+func (s *StorageClient) DeleteFile(gcsURI string) error {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	// Extract filename from gs://bucket/filename format
+	// gcsURI format: "gs://bucket-name/filename"
+	filename := gcsURI[len("gs://"+s.BucketName+"/"):]
+
+	obj := s.Client.Bucket(s.BucketName).Object(filename)
+	if err := obj.Delete(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}

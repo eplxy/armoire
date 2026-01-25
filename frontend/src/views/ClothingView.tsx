@@ -18,12 +18,14 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddClothingDialog from "../components/dialogs/AddClothingDialog";
 import {
   useGetClothingStats,
   useSearchClothing,
 } from "../hooks/queries/clothingQueries";
+import { Link } from "react-router";
+import type { ClothingItem } from "../models/models";
 
 const CATEGORIES = [
   "Tops",
@@ -80,6 +82,13 @@ export default function ClothingView() {
 
   const [isAISearchActive, setIsAISearchActive] = useState<boolean>(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
+
+  const items: ClothingItem[] = useMemo(() => {
+    if (searchMutation.isSuccess) {
+      return searchMutation.data;
+    }
+    return [];
+  }, [searchMutation.data, searchMutation.isSuccess]);
 
   const handleCategoryToggle = (
     _event: React.MouseEvent<HTMLElement>,
@@ -292,18 +301,20 @@ export default function ClothingView() {
           <Stack direction="row" flexWrap="wrap" gap={1}>
             {searchMutation.isSuccess &&
               searchMutation.data.length > 0 &&
-              searchMutation.data.map((item) => (
-                <Box sx={{ width: 160, height: 160 }} key={item.id}>
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    style={{
-                      width: 160,
-                      height: 160,
-                      objectFit: "cover",
-                    }}
-                  />
-                </Box>
+              items.map((item) => (
+                <Link to={`/clothing/${item.id}`} key={item.id}>
+                  <Box sx={{ width: 160, height: 160 }}>
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      style={{
+                        width: 160,
+                        height: 160,
+                        objectFit: "cover",
+                      }}
+                    />
+                  </Box>
+                </Link>
               ))}
             {searchMutation.isPending &&
               clothingStatsQuery.data !== undefined &&
@@ -356,10 +367,12 @@ export default function ClothingView() {
           >
             <AddIcon />
           </Fab>
-          <AddClothingDialog
-            open={isAddDialogOpen}
-            onClose={() => setIsAddDialogOpen(false)}
-          />
+          {isAddDialogOpen && ( // doing this remount and reset
+            <AddClothingDialog
+              open={isAddDialogOpen}
+              onClose={() => setIsAddDialogOpen(false)}
+            />
+          )}
         </Paper>
       </Grid>
     </Grid>

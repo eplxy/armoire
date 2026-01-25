@@ -6,7 +6,7 @@ var Categories = []string{
 
 var SubCategories = []string{
 	// Tops
-	"T-Shirt", "Shirt", "Blouse", "Sweater", "Hoodie", "Tank Top",
+	"T-Shirt", "Shirt", "Blouse", "Long-Sleeve", "Sweater", "Hoodie", "Tank Top",
 	// Dresses
 	"Dress", "Jumpsuit", "Romper",
 	// Bottoms

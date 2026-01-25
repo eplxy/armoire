@@ -258,6 +258,217 @@ const docTemplate = `{
                 }
             }
         },
+        "/clothing/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get details of a specific clothing item by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clothing"
+                ],
+                "summary": "Get a single clothing item by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clothing item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ClothingItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid clothing ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Clothing item not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete an existing clothing item by ID and remove the image from storage",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clothing"
+                ],
+                "summary": "Delete a clothing item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clothing item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid clothing ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Clothing item not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to delete clothing item",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing clothing item by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clothing"
+                ],
+                "summary": "Update a clothing item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clothing item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated clothing item data",
+                        "name": "clothing",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ClothingItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ClothingItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid clothing ID or request body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Clothing item not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update clothing item",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/clothing/{id}/owner": {
+            "get": {
+                "description": "Get the name of the owner of a specific clothing item by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clothing"
+                ],
+                "summary": "Get clothing item owner name",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clothing item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid clothing ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Clothing item not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch owner information",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/ping": {
             "get": {
                 "description": "Returns pong message",
@@ -452,6 +663,9 @@ const docTemplate = `{
                     "description": "Image Data",
                     "type": "string"
                 },
+                "isPublic": {
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Basic Metadata",
                     "type": "string"
@@ -469,6 +683,10 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "subCategory": {
+                    "description": "e.g., \"Jacket\", \"Shirt\", \"Pants\"",
+                    "type": "string"
                 },
                 "updatedAt": {
                     "type": "string"

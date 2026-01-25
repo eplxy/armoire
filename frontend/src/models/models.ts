@@ -8,7 +8,7 @@ export interface ClothingItem {
   id: string;
   userId: string;
   category: string;
-  color: string;
+  subCategory: string;
   imageUrl: string;
   createdAt: string;
   name?: string;
@@ -17,4 +17,5 @@ export interface ClothingItem {
   seasons?: string[];
   occasions?: string[];
   updatedAt?: string;
+  isPublic?: boolean;
 }

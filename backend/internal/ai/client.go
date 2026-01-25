@@ -17,6 +17,7 @@ import (
 type ClothingAnalysis struct {
 	Name        string   `json:"name"`
 	Category    string   `json:"category"`
+	SubCategory string   `json:"sub_category"`
 	Colors      []string `json:"colors"`
 	Seasons     []string `json:"seasons"`
 	Occasions   []string `json:"occasions"`

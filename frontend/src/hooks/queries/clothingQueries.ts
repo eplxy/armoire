@@ -48,4 +48,45 @@ export const useUploadClothingItem = () => {
         .post(formData)
         .json<ClothingItem>(),
   });
-}
+};
+
+export const useGetClothingItem = (clothingId: string) => {
+  return useQuery({
+    queryKey: ["clothing", clothingId],
+    queryFn: () =>
+      api
+        .auth(`Bearer ${localStorage.getItem("token") || ""}`)
+        .get(`/clothing/${clothingId}`)
+        .json<ClothingItem>(),
+  });
+};
+
+export const useGetClothingOwnerName = (clothingId: string) => {
+  return useQuery({
+    queryKey: ["clothing", clothingId, "ownerName"],
+    queryFn: () =>
+      api
+        .get(`/clothing/${clothingId}/owner`)
+        .json<{ ownerName: string }>()
+        .then((data) => data.ownerName),
+  });
+};
+
+export type UpdateClothingItemParams = {
+  id: string;
+  name?: string;
+  description?: string;
+  isPublic?: boolean;
+};
+
+export const useUpdateClothingItem = () => {
+  return useMutation({
+    mutationKey: ["clothing", "update"],
+    mutationFn: ({ id, ...updateData }: UpdateClothingItemParams) =>
+      api
+        .auth(`Bearer ${localStorage.getItem("token") || ""}`)
+        .url(`/clothing/${id}`)
+        .patch(updateData)
+        .json<ClothingItem>(),
+  });
+};

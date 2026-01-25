@@ -183,8 +183,6 @@ func UploadClothingHandler(c *gin.Context) {
 
 	processedBytes, err := ai.RemoveBackground(originalBytes, fileHeader.Filename)
 
-	fmt.Println("e")
-
 	if err == nil {
 		fmt.Println("Background removed successfully!")
 		finalBytes = processedBytes
@@ -229,6 +227,7 @@ func UploadClothingHandler(c *gin.Context) {
 		GCSURI:      gcsURI,
 		Name:        analysis.Name,
 		Category:    analysis.Category,
+		SubCategory: analysis.SubCategory,
 		Description: analysis.Description,
 		Colors:      analysis.Colors,
 		Seasons:     analysis.Seasons,
@@ -236,6 +235,7 @@ func UploadClothingHandler(c *gin.Context) {
 		Embedding:   vector,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
+		IsPublic:    false,
 	}
 
 	collection := database.GetCollection("clothing")
@@ -247,6 +247,235 @@ func UploadClothingHandler(c *gin.Context) {
 
 	// 6. Return Success Response
 	c.JSON(http.StatusOK, newItem)
+}
+
+// @Summary Get a single clothing item by ID
+// @Description Get details of a specific clothing item by its ID
+// @Tags clothing
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Clothing item ID"
+// @Success 200 {object} models.ClothingItem
+// @Failure 400 {string} string "Invalid clothing ID"
+// @Failure 401 {string} string "User ID not found in context"
+// @Failure 403 {string} string "Access denied"
+// @Failure 404 {string} string "Clothing item not found"
+// @Router /clothing/{id} [get]
+func GetClothingByIDHandler(c *gin.Context) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	clothingID := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(clothingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid clothing ID"})
+		return
+	}
+
+	collection := database.GetCollection("clothing")
+	ctx := c.Request.Context()
+
+	var item models.ClothingItem
+	filter := bson.M{
+		"_id": objectID,
+	}
+
+	err = collection.FindOne(ctx, filter).Decode(&item)
+	if err == mongo.ErrNoDocuments {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Clothing item not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch clothing item", "details": err.Error()})
+		return
+	}
+
+	// Only return the item if the user is the owner or if it's public
+	if item.UserID != userID && !item.IsPublic {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to view this item"})
+		return
+	}
+
+	c.JSON(http.StatusOK, item)
+}
+
+// @Summary Update a clothing item
+// @Description Update an existing clothing item by ID
+// @Tags clothing
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Clothing item ID"
+// @Param clothing body models.ClothingItem true "Updated clothing item data"
+// @Success 200 {object} models.ClothingItem
+// @Failure 400 {string} string "Invalid clothing ID or request body"
+// @Failure 404 {string} string "Clothing item not found"
+// @Failure 500 {string} string "Failed to update clothing item"
+// @Router /clothing/{id} [patch]
+func UpdateClothingHandler(c *gin.Context) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	clothingID := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(clothingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid clothing ID"})
+		return
+	}
+
+	// Parse raw JSON to determine which fields are present
+	var rawData map[string]interface{}
+	if err := c.ShouldBindJSON(&rawData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	collection := database.GetCollection("clothing")
+	ctx := c.Request.Context()
+
+	// Build update document with only the fields that are present in the request
+	updateFields := bson.M{}
+
+	if name, ok := rawData["name"]; ok {
+		updateFields["name"] = name
+	}
+	if category, ok := rawData["category"]; ok {
+		updateFields["category"] = category
+	}
+	if subCategory, ok := rawData["sub_category"]; ok {
+		updateFields["sub_category"] = subCategory
+	}
+	if description, ok := rawData["description"]; ok {
+		updateFields["description"] = description
+	}
+	if colors, ok := rawData["colors"]; ok {
+		updateFields["colors"] = colors
+	}
+	if seasons, ok := rawData["seasons"]; ok {
+		updateFields["seasons"] = seasons
+	}
+	if occasions, ok := rawData["occasions"]; ok {
+		updateFields["occasions"] = occasions
+	}
+	if isPublic, ok := rawData["is_public"]; ok {
+		updateFields["is_public"] = isPublic
+	}
+
+	// Always update the timestamp
+	updateFields["updated_at"] = time.Now()
+
+	update := bson.M{"$set": updateFields}
+
+	// Find and update the document, ensuring it belongs to the authenticated user
+	filter := bson.M{
+		"_id":     objectID,
+		"user_id": userID,
+	}
+
+	var updatedItem models.ClothingItem
+	err = collection.FindOneAndUpdate(
+		ctx,
+		filter,
+		update,
+		// Return the updated document
+		// Note: need to import "go.mongodb.org/mongo-driver/mongo/options" if not already
+	).Decode(&updatedItem)
+
+	if err == mongo.ErrNoDocuments {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Clothing item not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update clothing item"})
+		return
+	}
+
+	// Fetch the updated document to return the latest state
+	err = collection.FindOne(ctx, filter).Decode(&updatedItem)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated item"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedItem)
+}
+
+// @Summary Delete a clothing item
+// @Description Delete an existing clothing item by ID and remove the image from storage
+// @Tags clothing
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Clothing item ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "Invalid clothing ID"
+// @Failure 404 {string} string "Clothing item not found"
+// @Failure 500 {string} string "Failed to delete clothing item"
+// @Router /clothing/{id} [delete]
+func DeleteClothingHandler(c *gin.Context) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	clothingID := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(clothingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid clothing ID"})
+		return
+	}
+
+	collection := database.GetCollection("clothing")
+	ctx := c.Request.Context()
+
+	// First, find the item to get the GCS URI for deletion
+	var item models.ClothingItem
+	filter := bson.M{
+		"_id":     objectID,
+		"user_id": userID,
+	}
+
+	err = collection.FindOne(ctx, filter).Decode(&item)
+	if err == mongo.ErrNoDocuments {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Clothing item not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch clothing item"})
+		return
+	}
+
+	// Delete from database
+	result, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete clothing item"})
+		return
+	}
+	if result.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Clothing item not found"})
+		return
+	}
+
+	// Delete image from GCS
+	if item.GCSURI != "" {
+		gcsClient, _ := storage.NewStorageClient("armoire-bucket")
+		err = gcsClient.DeleteFile(item.GCSURI)
+		if err != nil {
+			// Log the error but don't fail the request since the DB record is already deleted
+			fmt.Printf("Warning: Failed to delete image from GCS: %v\n", err)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Clothing item deleted successfully"})
 }
 
 // UserStatsResponse represents the statistics for a user's clothing collection
@@ -322,4 +551,59 @@ func GetUserStatsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// @Summary Get clothing item owner name
+// @Description Get the name of the owner of a specific clothing item by its ID
+// @Tags clothing
+// @Produce json
+// @Param id path string true "Clothing item ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "Invalid clothing ID"
+// @Failure 404 {string} string "Clothing item not found"
+// @Failure 500 {string} string "Failed to fetch owner information"
+// @Router /clothing/{id}/owner [get]
+func GetClothingOwnerNameHandler(c *gin.Context) {
+	clothingID := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(clothingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid clothing ID"})
+		return
+	}
+
+	clothingCollection := database.GetCollection("clothing")
+	ctx := c.Request.Context()
+
+	// Find the clothing item to get the owner's user ID
+	var item models.ClothingItem
+	err = clothingCollection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&item)
+	if err == mongo.ErrNoDocuments {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Clothing item not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch clothing item"})
+		return
+	}
+
+	// Find the user by the user_id from the clothing item
+	userCollection := database.GetCollection("users")
+	userObjectID, err := primitive.ObjectIDFromHex(item.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	var user models.User
+	err = userCollection.FindOne(ctx, bson.M{"_id": userObjectID}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Owner not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch owner information"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ownerName": user.Name})
 }

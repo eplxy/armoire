@@ -15,8 +15,9 @@ type ClothingItem struct {
 	GCSURI   string `bson:"gcs_uri" json:"-"`          // gs:// path for Gemini API (internal use)
 
 	// Basic Metadata
-	Name     string `bson:"name" json:"name"`         // e.g., "Vintage Denim Jacket"
-	Category string `bson:"category" json:"category"` // e.g., "Outerwear", "Top", "Bottom"
+	Name        string `bson:"name" json:"name"`                // e.g., "Vintage Denim Jacket"
+	Category    string `bson:"category" json:"category"`        // e.g., "Outerwear", "Top", "Bottom"
+	SubCategory string `bson:"sub_category" json:"subCategory"` // e.g., "Jacket", "Shirt", "Pants"
 
 	// The "Vibe" Engine
 	// Gemini will generate a text description, which we then convert to a vector
@@ -31,4 +32,5 @@ type ClothingItem struct {
 	// Timestamps
 	CreatedAt time.Time `bson:"created_at" json:"createdAt"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updatedAt"`
+	IsPublic  bool      `bson:"is_public" json:"isPublic"`
 }

@@ -81,6 +81,8 @@ definitions:
       imageUrl:
         description: Image Data
         type: string
+      isPublic:
+        type: boolean
       name:
         description: Basic Metadata
         type: string
@@ -94,6 +96,9 @@ definitions:
         items:
           type: string
         type: array
+      subCategory:
+        description: e.g., "Jacket", "Shirt", "Pants"
+        type: string
       updatedAt:
         type: string
       userId:
@@ -208,6 +213,143 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /clothing/{id}:
+    delete:
+      description: Delete an existing clothing item by ID and remove the image from
+        storage
+      parameters:
+      - description: Clothing item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid clothing ID
+          schema:
+            type: string
+        "404":
+          description: Clothing item not found
+          schema:
+            type: string
+        "500":
+          description: Failed to delete clothing item
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete a clothing item
+      tags:
+      - clothing
+    get:
+      description: Get details of a specific clothing item by its ID
+      parameters:
+      - description: Clothing item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ClothingItem'
+        "400":
+          description: Invalid clothing ID
+          schema:
+            type: string
+        "404":
+          description: Clothing item not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get a single clothing item by ID
+      tags:
+      - clothing
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing clothing item by ID
+      parameters:
+      - description: Clothing item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated clothing item data
+        in: body
+        name: clothing
+        required: true
+        schema:
+          $ref: '#/definitions/models.ClothingItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ClothingItem'
+        "400":
+          description: Invalid clothing ID or request body
+          schema:
+            type: string
+        "404":
+          description: Clothing item not found
+          schema:
+            type: string
+        "500":
+          description: Failed to update clothing item
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update a clothing item
+      tags:
+      - clothing
+  /clothing/{id}/owner:
+    get:
+      description: Get the name of the owner of a specific clothing item by its ID
+      parameters:
+      - description: Clothing item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid clothing ID
+          schema:
+            type: string
+        "404":
+          description: Clothing item not found
+          schema:
+            type: string
+        "500":
+          description: Failed to fetch owner information
+          schema:
+            type: string
+      summary: Get clothing item owner name
+      tags:
+      - clothing
   /clothing/search:
     post:
       consumes:
