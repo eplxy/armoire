@@ -112,6 +112,7 @@ export default function ClothingView() {
         >
           <Stack spacing={3}>
             <TextField
+            helperText={isAISearchActive ? "Using AI to improve search" : ""}
               slotProps={{
                 input: {
                   sx: { borderRadius: 4 },
