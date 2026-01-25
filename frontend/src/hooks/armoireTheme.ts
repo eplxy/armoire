@@ -7,7 +7,7 @@ export const armoireTheme = createTheme({
       paper: "#F2F0EF",
     },
     text: { primary: "#0D0D0D", secondary: "#4D4D4D" },
-    primary: { main: "#9CA58E", contrastText: "#F2F0EF" },
+    primary: { main: "#9CA58E", contrastText: "#F2F0EF", light: "#cbd4c7" },
     secondary: { main: "#C5A3DB" },
     error: { main: "#DF4A4A", light: "#F4BEBE" },
     success: { main: "#9FB281" },

@@ -16,6 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
+import AddClothingDialog from "../components/dialogs/AddClothingDialog";
 
 const CATEGORIES = [
   "Tops",
@@ -69,6 +70,7 @@ export default function ClothingView() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
 
   const [isAISearchActive, setIsAISearchActive] = useState<boolean>(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
 
   const handleCategoryToggle = (
     _event: React.MouseEvent<HTMLElement>,
@@ -247,9 +249,14 @@ export default function ClothingView() {
               bottom: { xs: 12, md: 16 },
               right: { xs: 12, md: 16 },
             }}
+            onClick={() => setIsAddDialogOpen(true)}
           >
             <AddIcon />
           </Fab>
+          <AddClothingDialog
+            open={isAddDialogOpen}
+            onClose={() => setIsAddDialogOpen(false)}
+          />
         </Paper>
       </Grid>
     </Grid>
