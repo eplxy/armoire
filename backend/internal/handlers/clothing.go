@@ -12,8 +12,125 @@ import (
 	"github.com/exply/armoire/internal/models"
 	"github.com/exply/armoire/internal/storage"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// Search Request Body
+type SearchRequest struct {
+	Query      string   `json:"query"`      // e.g. "Dinner date" or "Blue jacket"
+	AISearch   bool     `json:"aiSearch"`   // Toggle between Regex match vs Vector Match
+	Categories []string `json:"categories"` // Hard filter
+	Colors     []string `json:"colors"`     // Hard filter
+}
+
+// @Summary Search clothing items
+// @Description Search using keyword matching or AI-powered "vibe" search with filters
+// @Tags clothing
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body handlers.SearchRequest true "Search parameters"
+// @Success 200 {array} models.ClothingItem
+// @Router /clothing/search [post]
+func SearchClothingHandler(c *gin.Context) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	var req SearchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	collection := database.GetCollection("clothing")
+	ctx := c.Request.Context()
+	var results []models.ClothingItem
+
+	if req.AISearch && req.Query != "" {
+		// 1. Get Embedding for the query (e.g., "Sad rainy day outfit")
+		aiClient, _ := ai.NewAIClient(ctx)
+		queryVector, err := aiClient.GetEmbedding(ctx, req.Query)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate search embedding"})
+			return
+		}
+
+		// 2. Build Filter for Vector Search
+		// Note: fields must be indexed as "filter" in Atlas
+		filter := bson.M{"user_id": userID}
+
+		if len(req.Categories) > 0 {
+			filter["category"] = bson.M{"$in": req.Categories}
+		}
+		if len(req.Colors) > 0 {
+			filter["colors"] = bson.M{"$in": req.Colors}
+		}
+
+		// 3. Build Aggregation Pipeline
+		pipeline := mongo.Pipeline{
+			{{Key: "$vectorSearch", Value: bson.D{
+				{Key: "index", Value: "vector_index"},
+				{Key: "path", Value: "embedding"},
+				{Key: "queryVector", Value: queryVector},
+				{Key: "numCandidates", Value: 100},
+				{Key: "limit", Value: 20},
+				{Key: "filter", Value: filter},
+			}}},
+			// Hide the embedding field to save bandwidth
+			{{Key: "$project", Value: bson.D{{Key: "embedding", Value: 0}}}},
+		}
+
+		cursor, err := collection.Aggregate(ctx, pipeline)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Search failed: " + err.Error()})
+			return
+		}
+		if err = cursor.All(ctx, &results); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode results"})
+			return
+		}
+
+	} else {
+
+		filter := bson.M{"user_id": userID}
+
+		// Text Search (Simple partial match on Name)
+		if req.Query != "" {
+			filter["name"] = bson.M{"$regex": primitive.Regex{Pattern: req.Query, Options: "i"}}
+		}
+
+		// Exact Filters
+		if len(req.Categories) > 0 {
+			filter["category"] = bson.M{"$in": req.Categories}
+		}
+		if len(req.Colors) > 0 {
+			filter["colors"] = bson.M{"$in": req.Colors}
+		}
+
+		cursor, err := collection.Find(ctx, filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Search failed"})
+			return
+		}
+		if err = cursor.All(ctx, &results); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode results"})
+			return
+		}
+	}
+
+	// Return empty array instead of null if no results
+	if results == nil {
+		results = []models.ClothingItem{}
+	}
+
+	c.JSON(http.StatusOK, results)
+}
 
 // @Summary Upload a clothing item
 // @Description Upload a clothing item image, analyze it with AI for auto-tagging, generate vector embeddings, and store in database

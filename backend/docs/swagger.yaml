@@ -26,6 +26,25 @@ definitions:
     - name
     - password
     type: object
+  handlers.SearchRequest:
+    properties:
+      aiSearch:
+        description: Toggle between Regex match vs Vector Match
+        type: boolean
+      categories:
+        description: Hard filter
+        items:
+          type: string
+        type: array
+      colors:
+        description: Hard filter
+        items:
+          type: string
+        type: array
+      query:
+        description: e.g. "Dinner date" or "Blue jacket"
+        type: string
+    type: object
   models.ClothingItem:
     properties:
       category:
@@ -176,6 +195,33 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /clothing/search:
+    post:
+      consumes:
+      - application/json
+      description: Search using keyword matching or AI-powered "vibe" search with
+        filters
+      parameters:
+      - description: Search parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SearchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ClothingItem'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Search clothing items
+      tags:
+      - clothing
   /clothing/upload:
     post:
       consumes:

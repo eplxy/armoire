@@ -142,6 +142,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/clothing/search": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search using keyword matching or AI-powered \"vibe\" search with filters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clothing"
+                ],
+                "summary": "Search clothing items",
+                "parameters": [
+                    {
+                        "description": "Search parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SearchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.ClothingItem"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/clothing/upload": {
             "post": {
                 "security": [
@@ -306,6 +348,33 @@ const docTemplate = `{
                 },
                 "returnToken": {
                     "type": "boolean"
+                }
+            }
+        },
+        "handlers.SearchRequest": {
+            "type": "object",
+            "properties": {
+                "aiSearch": {
+                    "description": "Toggle between Regex match vs Vector Match",
+                    "type": "boolean"
+                },
+                "categories": {
+                    "description": "Hard filter",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "colors": {
+                    "description": "Hard filter",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "query": {
+                    "description": "e.g. \"Dinner date\" or \"Blue jacket\"",
+                    "type": "string"
                 }
             }
         },
