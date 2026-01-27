@@ -46,9 +46,7 @@ export default function ArticleView() {
   const ownerName = useGetClothingOwnerName(clothingId || "").data;
   const updateMutation = useUpdateClothingItem();
 
-  if (!itemQuery.isLoading && itemQuery.isError) {
-    return <NotFoundView />;
-  }
+  
 
   useEffect(() => {
     if (itemQuery.isSuccess && item) {
@@ -59,6 +57,9 @@ export default function ArticleView() {
     }
   }, [itemQuery.isSuccess, item]);
 
+  if (!itemQuery.isLoading && itemQuery.isError) {
+    return <NotFoundView />;
+  }
   const handlePublicToggle = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {

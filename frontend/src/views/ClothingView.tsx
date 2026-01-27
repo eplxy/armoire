@@ -296,6 +296,7 @@ export default function ClothingView() {
             p: { xs: 2, md: 4 },
             boxShadow: 2,
             position: "relative",
+            overflow: "auto",
           }}
         >
           <Stack direction="row" flexWrap="wrap" gap={1}>
