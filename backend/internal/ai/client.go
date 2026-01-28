@@ -39,7 +39,6 @@ func NewAIClient(ctx context.Context) (*AIClient, error) {
 	model := client.GenerativeModel("gemini-2.0-flash")
 	model.ResponseMIMEType = "application/json" // Force JSON output
 
-	// Use the latest embedding model
 	embedModel := client.EmbeddingModel("text-embedding-004")
 
 	return &AIClient{

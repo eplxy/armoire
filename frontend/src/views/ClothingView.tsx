@@ -306,7 +306,7 @@ export default function ClothingView() {
                 <Link to={`/clothing/${item.id}`} key={item.id}>
                   <Box sx={{ width: 160, height: 160 }}>
                     <img
-                      src={item.imageUrl}
+                      src={item.thumbnailUrl || item.imageUrl}
                       alt={item.name}
                       style={{
                         width: 160,

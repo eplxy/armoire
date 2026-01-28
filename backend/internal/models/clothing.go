@@ -11,8 +11,9 @@ type ClothingItem struct {
 	UserID string             `bson:"user_id" json:"userId"` // Good for scaling later
 
 	// Image Data
-	ImageURL string `bson:"image_url" json:"imageUrl"` // Public URL for Frontend
-	GCSURI   string `bson:"gcs_uri" json:"-"`          // gs:// path for Gemini API (internal use)
+	ImageURL     string `bson:"image_url" json:"imageUrl"` // Public URL for Frontend
+	GCSURI       string `bson:"gcs_uri" json:"-"`          // gs:// path for Gemini API (internal use)
+	ThumbnailURL string `bson:"thumbnail_url" json:"thumbnailUrl"`
 
 	// Basic Metadata
 	Name        string `bson:"name" json:"name"`                // e.g., "Vintage Denim Jacket"

@@ -10,6 +10,7 @@ export interface ClothingItem {
   category: string;
   subCategory: string;
   imageUrl: string;
+  thumbnailUrl: string;
   createdAt: string;
   name?: string;
   description?: string;
