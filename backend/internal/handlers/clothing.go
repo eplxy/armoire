@@ -82,7 +82,7 @@ func SearchClothingHandler(c *gin.Context) {
 				{Key: "index", Value: "vector_index"},
 				{Key: "path", Value: "embedding"},
 				{Key: "queryVector", Value: queryVector},
-				{Key: "numCandidates", Value: 20},
+				{Key: "numCandidates", Value: 400},
 				{Key: "limit", Value: 5},
 				{Key: "filter", Value: filter},
 			}}},
@@ -90,6 +90,7 @@ func SearchClothingHandler(c *gin.Context) {
 			{{Key: "$project", Value: bson.D{{Key: "embedding", Value: 0}}}},
 		}
 
+		collection.Aggregate(ctx, pipeline)
 		cursor, err := collection.Aggregate(ctx, pipeline)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Search failed: " + err.Error()})
