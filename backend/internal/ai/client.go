@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	"github.com/exply/armoire/internal/taxonomy"
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
+	"google.golang.org/genai"
 )
 
 // This struct matches the JSON we want Gemini to generate
@@ -25,30 +24,26 @@ type ClothingAnalysis struct {
 }
 
 type AIClient struct {
-	GenModel   *genai.GenerativeModel
-	EmbedModel *genai.EmbeddingModel
+	client *genai.Client
 }
 
 func NewAIClient(ctx context.Context) (*AIClient, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey:  apiKey,
+		Backend: genai.BackendGeminiAPI,
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	model := client.GenerativeModel("gemini-2.0-flash")
-	model.ResponseMIMEType = "application/json" // Force JSON output
-
-	embedModel := client.EmbeddingModel("text-embedding-004")
-
 	return &AIClient{
-		GenModel:   model,
-		EmbedModel: embedModel,
+		client: client,
 	}, nil
 }
 
 // AnalyzeImage sends the image data to Gemini and gets structured tags
 func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader, mimeType string) (*ClothingAnalysis, error) {
+
 	// join the slices into comma-separated strings
 	validCategories := strings.Join(taxonomy.Categories, ", ")
 	validSubCategories := strings.Join(taxonomy.SubCategories, ", ")
@@ -85,12 +80,15 @@ func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader, mimeTy
 	if err != nil {
 		return nil, fmt.Errorf("failed to read image data: %w", err)
 	}
+	// Prepare the parts
+	parts := []*genai.Part{
+		{Text: prompt},
+		{InlineData: &genai.Blob{Data: imgBytes, MIMEType: mimeType}},
+	}
 
-	// Send image data inline to Gemini
-	resp, err := c.GenModel.GenerateContent(ctx,
-		genai.Text(prompt),
-		genai.ImageData(mimeType, imgBytes),
-	)
+	resp, err := c.client.Models.GenerateContent(ctx, "gemini-2.5-flash", []*genai.Content{{Parts: parts}}, &genai.GenerateContentConfig{
+		ResponseMIMEType: "application/json",
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -100,13 +98,12 @@ func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader, mimeTy
 	}
 
 	// Extract text part
-	rawJSON, ok := resp.Candidates[0].Content.Parts[0].(genai.Text)
-	if !ok {
+	part := resp.Candidates[0].Content.Parts[0]
+	if part.Text == "" {
 		return nil, fmt.Errorf("unexpected response format")
 	}
 
-	// Clean up potential markdown formatting (```json ... ```)
-	jsonStr := strings.TrimPrefix(string(rawJSON), "```json")
+	jsonStr := strings.TrimPrefix(part.Text, "```json")
 	jsonStr = strings.TrimPrefix(jsonStr, "```")
 	jsonStr = strings.TrimSuffix(jsonStr, "```")
 
@@ -120,17 +117,16 @@ func (c *AIClient) AnalyzeImage(ctx context.Context, imageData io.Reader, mimeTy
 
 // GetEmbedding converts the description into a vector
 func (c *AIClient) GetEmbedding(ctx context.Context, text string) ([]float32, error) {
-	resp, err := c.EmbedModel.EmbedContent(ctx, genai.Text(text))
+	content := []*genai.Content{{Parts: []*genai.Part{{Text: text}}}}
+	resp, err := c.client.Models.EmbedContent(ctx, "gemini-embedding-001", content, nil)
 	if err != nil {
 		return nil, err
 	}
-	return resp.Embedding.Values, nil
+	return resp.Embeddings[0].Values, nil
 }
 
 // GenerateStylistBlurb takes a map of stats (e.g. {"Black": 5, "Blue": 2, "Tops": 10})
 func (c *AIClient) GenerateStylistBlurb(ctx context.Context, stats map[string]interface{}) (string, error) {
-	model := c.GenModel
-	model.ResponseMIMEType = "text/plain" // We just want a string this time
 
 	prompt := fmt.Sprintf(`
 		You are a witty, helpful personal stylist.
@@ -148,7 +144,8 @@ func (c *AIClient) GenerateStylistBlurb(ctx context.Context, stats map[string]in
 		Keep it under 60 words.
 	`, stats)
 
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	content := []*genai.Content{{Parts: []*genai.Part{{Text: prompt}}}}
+	resp, err := c.client.Models.GenerateContent(ctx, "gemini-2.5-flash", content, nil)
 	if err != nil {
 		return "", err
 	}
@@ -158,5 +155,5 @@ func (c *AIClient) GenerateStylistBlurb(ctx context.Context, stats map[string]in
 	}
 
 	// Extract text
-	return fmt.Sprintf("%s", resp.Candidates[0].Content.Parts[0]), nil
+	return fmt.Sprintf("%s", resp.Candidates[0].Content.Parts[0].Text), nil
 }
