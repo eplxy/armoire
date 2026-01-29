@@ -6,10 +6,12 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/exply/armoire/internal/ai"
 	"github.com/exply/armoire/internal/database"
+	"github.com/exply/armoire/internal/imageproc"
 	"github.com/exply/armoire/internal/models"
 	"github.com/exply/armoire/internal/storage"
 	"github.com/exply/armoire/internal/taxonomy"
@@ -59,7 +61,7 @@ func SearchClothingHandler(c *gin.Context) {
 		aiClient, _ := ai.NewAIClient(ctx)
 		queryVector, err := aiClient.GetEmbedding(ctx, req.Query)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate search embedding"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate search embedding", "details": err.Error()})
 			return
 		}
 
@@ -80,7 +82,7 @@ func SearchClothingHandler(c *gin.Context) {
 				{Key: "index", Value: "vector_index"},
 				{Key: "path", Value: "embedding"},
 				{Key: "queryVector", Value: queryVector},
-				{Key: "numCandidates", Value: 20},
+				{Key: "numCandidates", Value: 400},
 				{Key: "limit", Value: 5},
 				{Key: "filter", Value: filter},
 			}}},
@@ -88,6 +90,7 @@ func SearchClothingHandler(c *gin.Context) {
 			{{Key: "$project", Value: bson.D{{Key: "embedding", Value: 0}}}},
 		}
 
+		collection.Aggregate(ctx, pipeline)
 		cursor, err := collection.Aggregate(ctx, pipeline)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Search failed: " + err.Error()})
@@ -202,6 +205,26 @@ func UploadClothingHandler(c *gin.Context) {
 	}
 	publicURL := "https://storage.googleapis.com/armoire-bucket/" + finalFilename
 
+	thumbBytes, err := imageproc.CreateThumbnail(finalBytes, 300)
+	var thumbURL string
+
+	if err == nil {
+		// 3. Create a filename like "abc12345_thumb.png"
+		// This splits the extension to insert "_thumb"
+		ext := filepath.Ext(finalFilename)
+		nameWithoutExt := strings.TrimSuffix(finalFilename, ext)
+		thumbFilename := nameWithoutExt + "_thumb" + ext
+
+		// 4. Upload Thumbnail to GCS
+		_, err := gcsClient.UploadFile(bytes.NewReader(thumbBytes), thumbFilename)
+		if err == nil {
+			thumbURL = "https://storage.googleapis.com/armoire-bucket/" + thumbFilename
+		}
+	} else {
+		// Fallback: If thumbnail gen fails, just use the full URL so the app doesn't break
+		thumbURL = publicURL
+	}
+
 	// 3. Analyze with Gemini (Auto-Tagging)
 	aiClient, _ := ai.NewAIClient(c.Request.Context()) // Initialize AI Client
 
@@ -221,21 +244,22 @@ func UploadClothingHandler(c *gin.Context) {
 
 	// 5. Save to MongoDB
 	newItem := models.ClothingItem{
-		ID:          primitive.NewObjectID(),
-		UserID:      userID,
-		ImageURL:    publicURL,
-		GCSURI:      gcsURI,
-		Name:        analysis.Name,
-		Category:    analysis.Category,
-		SubCategory: analysis.SubCategory,
-		Description: analysis.Description,
-		Colors:      analysis.Colors,
-		Seasons:     analysis.Seasons,
-		Occasions:   analysis.Occasions,
-		Embedding:   vector,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		IsPublic:    false,
+		ID:           primitive.NewObjectID(),
+		UserID:       userID,
+		ImageURL:     publicURL,
+		GCSURI:       gcsURI,
+		ThumbnailURL: thumbURL,
+		Name:         analysis.Name,
+		Category:     analysis.Category,
+		SubCategory:  analysis.SubCategory,
+		Description:  analysis.Description,
+		Colors:       analysis.Colors,
+		Seasons:      analysis.Seasons,
+		Occasions:    analysis.Occasions,
+		Embedding:    vector,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		IsPublic:     false,
 	}
 
 	collection := database.GetCollection("clothing")
